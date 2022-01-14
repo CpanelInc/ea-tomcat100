@@ -37,7 +37,7 @@ sub script {
     # What I have here is the official tomcat images are
     # Also note: I gave it the full url, and it did not ask me to choose
 
-    my @cmd = ("podman", "run", "-d", "--name", $name, "--rm=true", "-p", "$http_port:$http_port", "-p", "$ajp_port:$ajp_port", "-v", "~/ea-tomcat100/conf:/usr/local/tomcat/conf", "-v", "~/ea-tomcat100/logs/:/usr/local/tomcat/logs", "-v", "~/ea-tomcat100/run:/usr/local/tomcat/run", "-v", "~/ea-tomcat100/temp/:/usr/local/tomcat/temp", "-v", "~/ea-tomcat100/webapps:/usr/local/tomcat/webapps", "-v", "~/ea-tomcat100/work/:/usr/local/tomcat/work", "-e", 'CATALINA_OPTS=-Xmx100m', "-e", 'CATALINA_BASE=/usr/local/tomcat', "docker.io/library/tomcat:10.0.14");
+    my @cmd = ("podman", "run", "-d", "--name", $name, "--rm=true", "-p", "$http_port:$http_port", "-p", "$ajp_port:$ajp_port", "-v", "~/ea-tomcat100/conf:/usr/local/tomcat/conf", "-v", "~/ea-tomcat100/logs/:/usr/local/tomcat/logs", "-v", "~/ea-tomcat100/run:/usr/local/tomcat/run", "-v", "~/ea-tomcat100/temp/:/usr/local/tomcat/temp", "-v", "~/ea-tomcat100/webapps:/usr/local/tomcat/webapps", "-v", "~/ea-tomcat100/work/:/usr/local/tomcat/work", "-e", 'CATALINA_OPTS=-Xmx100m', "-e", 'CATALINA_BASE=/usr/local/tomcat', "docker.io/library/tomcat:XYZZY");
     system (@cmd);
 
     return 0;
