@@ -1,0 +1,404 @@
+#!/usr/local/cpanel/3rdparty/bin/perl
+# cpanel - scripts/ea-tomcat100                      Copyright 2022 cPanel, Inc.
+#                                                           All rights Reserved.
+# copyright@cpanel.net                                         http://cpanel.net
+# This code is subject to the cPanel license. Unauthorized copying is prohibited
+
+use strict;
+use warnings;
+
+package scripts::ea_tomcat100;
+
+use Cpanel::Config::LoadUserDomains ();
+use Cpanel::AccessIds               ();
+use Cpanel::JSON                    ();
+
+use File::Path::Tiny ();    # Path::Tiny’s version is overly complicated
+use Path::Tiny;
+use Capture::Tiny 'capture';
+use XML::LibXML ();
+use Cwd         ();
+use App::CmdDispatch;
+use Path::Iter            ();
+use Cpanel::SafeDir::Read ();
+
+my $cmds = {
+    add => {
+        code     => \&add,
+        clue     => 'add <user>',
+        abstract => 'add tomcat 10.0 support',
+        help     => "add tomcat 10.0 instance to the given user.",
+    },
+    rem => {
+        code     => \&rem,
+        clue     => 'rem <user>',
+        abstract => 'remove tomcat 10.0 support',
+        help     => "Remove tomcat 10.0 instance from the given user.\n\tSince this is destructive you must also verify you want to continue. Passing --verify=<user> will make it work. If you don’t pass it an explanatory message is given with instructions.",
+
+    },
+    list => {
+        code => sub {
+            _bail( $_[0], "“list” does not take any arguments" ) if @_ > 1;
+            for my $user ( _get_tomcat100_users() ) {
+                print "$user\n";
+            }
+        },
+        clue     => 'list',
+        abstract => 'list users with tomcat 10.0 instance',
+        help     => 'List users, one per line, that have a tomcat 10.0 instance.',
+    },
+    all => {
+        code => sub {
+            my ( $app, $operation ) = @_;
+            if ( !defined $operation || ( $operation ne "stop" && $operation ne "restart" ) ) {
+                _bail( $_[0], "“all” requires an additional argument, either “stop” or “restart”" );
+            }
+
+            for my $user ( _get_tomcat100_users() ) {
+                print "Starting $user …\n";
+                my $homedir = _get_homedir($user);
+                Cpanel::AccessIds::do_as_user_with_exception(
+                    $user,
+                    sub {
+                        local $ENV{HOME} = $homedir;
+                        my $orig_umask = umask(0027);
+                        _ubic_tc($operation);
+                        umask($orig_umask);
+                    }
+                );
+                print " … done ($user).\n";
+            }
+        },
+        clue     => 'all <stop|restart>',
+        abstract => 'Stop/restart all tomcat 10.0 instances',
+        help     => 'Stop or restart all users’s tomcat 10.0 instances.',
+    },
+};
+
+my $hint_blurb = "This tool supports the following commands (i.e. $0 {command} …):";
+my $opts       = {
+    'help:pre_hint'  => $hint_blurb,
+    'help:pre_help'  => "Various tomcat 10.0 related admin utilities\n\n$hint_blurb",
+    default_commands => "help",
+    alias            => { remove => "rem" },
+};
+
+run(@ARGV) if !caller;
+
+sub run {
+    my (@argv) = @_;
+    die "This script should only be called as root\n" if $> != 0;
+
+    local $ENV{TERM} = $ENV{TERM} || "xterm-256color";    # non-CLI modulino avoid needless: Cannot find termcap: TERM not set at …/Term/ReadLine.pm line 373.
+    App::CmdDispatch->new( $cmds, $opts )->run(@argv);
+}
+
+################
+#### commands ##
+################
+
+sub add {
+    my ( $app, $user, $homedir ) = _process_args(@_);
+
+    _bail( $app, "The user already has a tomcat 10.0 instance." ) if -d "$homedir/ea-tomcat100" && !_tomcat100_dir_is_empty_or_apps_only("$homedir/ea-tomcat100");
+
+    print "Adding $user’s tomcat 10.0 instance …\n";
+
+    my ( $http_port, $ajp_port ) = _get_ports($user);
+
+    my $curdir = Cwd::cwd();
+    Cpanel::AccessIds::do_as_user_with_exception(
+        $user,
+        sub {
+            local $ENV{HOME} = $homedir;
+            my $orig_umask = umask(0027);
+
+            mkdir "$homedir/ea-tomcat100";    # it may exist so don’t check it’s RV
+            die "Could not create directory “$homedir/ea-tomcat100”: $!\n" if !-d "$homedir/ea-tomcat100";
+            chdir "$homedir/ea-tomcat100" or die "Could not change into “$homedir/ea-tomcat100”: $!\n";
+
+            for my $dir (qw(conf bin logs run temp webapps/ROOT work/Catalina/localhost/ROOT)) {
+                File::Path::Tiny::mk($dir) or die "Could not create directory “$dir”: $!\n";
+            }
+
+            my %symlinks = (
+                '/opt/cpanel/ea-tomcat100/README.USER-SERVICE-MANAGEMENT' => 'README.USER-SERVICE-MANAGEMENT',
+                '/opt/cpanel/ea-tomcat100/README.FASTERSTARTUP'           => 'README.FASTERSTARTUP',
+                '/opt/cpanel/ea-tomcat100/README.SECURITY'                => 'README.SECURITY',
+                '/opt/cpanel/ea-tomcat100/README.APACHE-PROXY'            => 'README.APACHE-PROXY',
+                '/opt/cpanel/ea-tomcat100/README.USER-INSTANCE'           => 'README.USER-INSTANCE',
+            );
+            for my $target ( keys %symlinks ) {
+                symlink( $target, $symlinks{$target} ) or warn "Could not symlink “$symlinks{$target}” to “$target”: $!\n";
+            }
+
+            my $data_start = tell DATA;
+            path("bin/setenv.sh")->spew(<DATA>);
+            seek( DATA, $data_start, 0 );
+
+            system("cp -r /opt/cpanel/ea-tomcat100/user-conf/* conf/");
+            system("chmod 640 conf/*");
+
+            my $dom = XML::LibXML->load_xml( location => "conf/server.xml", load_ext_dtd => 0, ext_ent_handler => sub { } );
+            $dom->findnodes('//Server[@shutdown="SHUTDOWN"]')->shift()->setAttribute( port => -1 );    # disable the shutdown port
+
+            my $ajp_connector_exists = 0;
+            for my $conn ( $dom->findnodes("//Server/Service/Connector") ) {
+
+                # hide version exposure
+                # Could set `server` in addition to xpoweredBy but:
+                #    1. it is a generic value for tomcat 4.1-10.0 so all an attacker can gelan is that it is tomcat
+                #    2. if we set it to something else it will be a known value and they will be able to
+                #       determine not only that its tomcat but also the version
+                $conn->setAttribute( xpoweredBy => "false" );
+
+                # set the ports to the user’s ports
+                if ( $conn->getAttribute('protocol') eq 'HTTP/1.1' ) {
+                    $conn->setAttribute( port => $http_port );
+                    $conn->removeAttribute('redirectPort');
+                }
+                elsif ( $conn->getAttribute('protocol') eq 'AJP/1.3' ) {
+                    $conn->setAttribute( port => $ajp_port );
+                    $conn->removeAttribute('redirectPort');
+                    $conn->setAttribute( secretRequired => "false" );
+                    $ajp_connector_exists = 1;
+                }
+            }
+
+            if ( !$ajp_connector_exists ) {
+
+                # Create <Connector port="10001" protocol="AJP/1.3" xpoweredBy="false"/>
+                my $ajp = $dom->createElement('Connector');
+                $ajp->setAttribute( port           => $ajp_port );
+                $ajp->setAttribute( protocol       => 'AJP/1.3' );
+                $ajp->setAttribute( xpoweredBy     => "false" );
+                $ajp->setAttribute( secretRequired => "false" );
+                $dom->findnodes('//Server/Service[@name="Catalina"]')->shift()->addChild($ajp);
+            }
+
+            my $valve = $dom->createElement("Valve");
+            $valve->setAttribute( className      => "org.apache.catalina.valves.ErrorReportValve" );
+            $valve->setAttribute( showReport     => "false" );
+            $valve->setAttribute( showServerInfo => "false" );
+            for my $host ( $dom->findnodes("//Host") ) {
+
+                # hide version exposure: Create a ErrorReportValve w/ showServerInfo and showReport attributes to false
+                $host->addChild($valve);
+
+                # Host – autoDeploy, deployOnStartup, and deployXML false
+                #   - FWiW, ASF does exploded deploys instead of ^^^
+                $host->setAttribute( autoDeploy      => "false" );
+                $host->setAttribute( deployOnStartup => "false" );
+                $host->setAttribute( deployXML       => "false" );
+            }
+
+            _write_dom( "conf/server.xml" => $dom );
+
+            _sysdie( "add service management" => ( qw(/usr/local/cpanel/scripts/cpuser_service_manager add ea-tomcat100), "--init-script=/opt/cpanel/ea-tomcat100/bin/user-init.sh" ) );
+
+            _ubic_tc("start");
+
+            umask($orig_umask);
+        }
+    );
+
+    chdir $curdir or warn "Could not chdir back to “$curdir”: $!\n";
+    print " … done!\n";
+
+    return;
+}
+
+sub rem {
+    my ( $app, $user, $homedir ) = _process_args(@_);
+
+    _bail( $app, "The user does not have a tomcat 10.0 instance." ) if !-d "$homedir/ea-tomcat100" || _tomcat100_dir_is_empty_or_apps_only("$homedir/ea-tomcat100");
+
+    print "Removing $user’s tomcat 10.0 instance …\n";
+
+    if ( !grep m/^--verify=\Q$user\E$/, @_ ) {
+        die "This operation can not be undone, please pass the --verify=<USER> to indicate you’ve backed up anything in $homedir/ea-tomcat100/ that you want to keep!\n";
+    }
+
+    my $curdir = Cwd::cwd();
+    Cpanel::AccessIds::do_as_user_with_exception(
+        $user,
+        sub {
+            local $ENV{HOME} = $homedir;
+            chdir $homedir or die "Could not change into “$homedir”: $!\n";
+
+            my $orig_umask = umask(0027);
+            _ubic_tc("stop");
+            _sysdie( "remove service management" => qw(/usr/local/cpanel/scripts/cpuser_service_manager rem ea-tomcat100) );
+
+            # Can’t just File::Path::Tiny::rm("$homedir/ea-tomcat100")
+            # because we want to keep these if they are not empty
+            rmdir("$homedir/ea-tomcat100/webapps/ROOT");
+            rmdir("$homedir/ea-tomcat100/webapps");
+            my $fetch = Path::Iter::get_iterator("$homedir/ea-tomcat100");
+            while ( my $path = $fetch->() ) {
+                next
+                  if $path eq "$homedir/ea-tomcat100"
+                  || $path =~ m{^\Q$homedir\E/ea-tomcat100/webapps(:?/|)};
+
+                -l $path || -f _ ? unlink($path) : File::Path::Tiny::rm($path);
+            }
+            rmdir("$homedir/ea-tomcat100");    # if its not empty (webapps) then this fails, that is what we want
+
+            umask($orig_umask);
+        }
+    );
+
+    chdir $curdir or warn "Could not chdir back to “$curdir”: $!\n";
+    print " … done!\n";
+
+    return;
+}
+
+###############
+#### helpers ##
+###############
+
+sub _ubic_tc {
+    my ($cmd) = @_;
+
+    # would be cool if Cpanel::FindBin (or whatever) did this for us: CPANEL-22345
+    my $real_perl  = readlink("/usr/local/cpanel/3rdparty/bin/perl");
+    my $cp_bin_dir = $real_perl;
+    $cp_bin_dir =~ s{/perl$}{};
+    local $ENV{PATH} = "$cp_bin_dir:$ENV{PATH}";    # not only does this allow it to find our ubic-admin, it allows its env-shebang to pick up our perl
+
+    # This is necessary to reflect reality under start/restart since Cpanel::AccessIds does not reset ENV
+    #     - HOME is already set because other callers need it also
+    local $ENV{USER} = ( getpwuid($>) )[0];
+
+    system( "ubic", $cmd, "ea-tomcat100" );
+
+    return $? ? 0 : 1;
+}
+
+sub _sysdie {
+    my ( $do_this, @cmd ) = @_;
+    my $cmd_str = join( " ", @cmd );
+    system(@cmd) && die "Failed to $do_this (exit $?)\nThis will need done manually:\n\t`$cmd_str`\n";
+    return;
+}
+
+sub _bail {
+    my ( $app, $msg ) = @_;
+
+    chomp($msg);
+
+    die "$msg\n" if $ENV{"scripts::ea_tomcat100::bail_die"};
+
+    warn "$msg\n";
+    $app->help();
+    exit(1);    # there is no return()ing from this lol
+}
+
+sub _process_args {
+    my ( $app, $user ) = @_;
+
+    _bail( $app, "User argument is missing." ) if !$user;
+    _bail( $app, "User argument is invalid." ) if !exists { Cpanel::Config::LoadUserDomains::loaduserdomains( undef, 0, 1 ) }->{$user};
+
+    return ( $app, $user, _get_homedir($user) );
+}
+
+sub _get_homedir {
+    my ($user) = @_;
+    return ( getpwnam($user) )[7];
+}
+
+sub _get_ports {
+    my ($user) = @_;
+    my ( $http_port, $ajp_port );
+    my $port_count = 2;
+
+    _load_modulino("/usr/local/cpanel/scripts/cpuser_port_authority");
+
+    # see if they have them already so that we don’t keep allocating them
+    if ( -f $scripts::cpuser_port_authority::port_authority_conf ) {
+        my @ports;
+        my $hr = eval { Cpanel::JSON::LoadFile($scripts::cpuser_port_authority::port_authority_conf) } || {};
+        for my $port ( keys %{$hr} ) {
+            next if $hr->{$port}{owner} ne $user || !exists $hr->{$port}{service} || $hr->{$port}{service} ne 'ea-tomcat100';
+            push @ports, $port;
+        }
+        if ( @ports >= $port_count ) {
+            ( $http_port, $ajp_port ) = sort @ports;
+        }
+    }
+
+    if ( !$http_port || !$ajp_port ) {
+        my @cmd = ( qw(/usr/local/cpanel/scripts/cpuser_port_authority give), $user, $port_count, '--service=ea-tomcat100' );
+        my ( $stdout, $stderr, $exit ) = capture { system(@cmd) };    # we could scripts::cpuser_port_authority::run("give", … but its nice to output the command, and the exit value is nice to detect success/failure
+
+        if ($exit) {
+            my $cmd = join( " ", @cmd );
+            $stderr =~ s{\[\?1034h}{};
+            die "$stderr\nFailed to allocate ports!\n`$cmd` exited $exit\n";
+        }
+        else {
+            my @lines = split( /\n/, $stdout );
+            chomp(@lines);
+            ( $http_port, $ajp_port ) = sort grep { m/^[1-9][0-9]+$/ } @lines;
+        }
+    }
+
+    if ( !$http_port || !$ajp_port ) {
+        die "Failed to get ports ($port_count)!\n";
+    }
+
+    return ( $http_port, $ajp_port );
+}
+
+sub _load_modulino {
+    my ($modulino) = @_;
+    eval { require "$modulino" };
+    die "This feature is not available on this version of cPanel. You need v76 or newer\n" if $@;
+    return 1;
+}
+
+sub _write_dom {
+    my ( $path, $dom ) = @_;
+
+    # get nicely indented XML (from http://grantm.github.io/perl-libxml-by-example/dom.html#modifying-the-dom)
+    for my $node ( $dom->findnodes('//text()') ) {
+        $node->parentNode->removeChild($node) unless $node =~ /\S/;
+    }
+
+    return path($path)->spew( $dom->toString(1) );
+}
+
+sub _get_cmd { $cmds }
+
+sub _get_tomcat100_users {
+    my @tomcat100_users;
+
+    my %cpusers = Cpanel::Config::LoadUserDomains::loaduserdomains( undef, 0, 1 );
+    for my $user ( sort keys %cpusers ) {
+        my $homedir = _get_homedir($user);
+        push @tomcat100_users, $user if -d "$homedir/ea-tomcat100" && !_tomcat100_dir_is_empty_or_apps_only("$homedir/ea-tomcat100");
+    }
+
+    return @tomcat100_users;
+}
+
+sub _tomcat100_dir_is_empty_or_apps_only {
+    my ($tomcat100_dir) = @_;
+    my @contents = Cpanel::SafeDir::Read::read_dir($tomcat100_dir);
+    return 1 if !@contents || ( -d "$tomcat100_dir/webapps" && @contents == 1 );
+    return;
+}
+
+1;
+
+__DATA__
+# Your customizations can go here, for example, CATALINA_OPTS
+
+# example from https://wiki.apache.org/tomcat/HowTo/FasterStartUp#Entropy_Source
+# Trade some security for startup speed by using non-blocking entropy:
+# CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"
+
+# DO NOT EDIT THIS LINE OR ANYTHING BELOW THIS LINE
+. /opt/cpanel/ea-tomcat100/bin/user-setenv.sh
