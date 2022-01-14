@@ -1,6 +1,6 @@
-/var/log/ea-tomcat85/catalina.out
-/var/log/ea-tomcat85/catalina.err
-/var/log/ea-tomcat85/*.log
+/var/log/ea-tomcat100/catalina.out
+/var/log/ea-tomcat100/catalina.err
+/var/log/ea-tomcat100/*.log
 {
     copytruncate
     weekly

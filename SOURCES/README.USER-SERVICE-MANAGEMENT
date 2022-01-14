@@ -1,10 +1,10 @@
 Each private tomcat 8.5 instance is setup, via /usr/local/cpanel/scripts/cpuser_service_manager,
 so that you can manage it w/ the `ubic` command, the most common commands are:
 
-    `ubic status ea-tomcat85`
-    `ubic start ea-tomcat85`
-    `ubic stop ea-tomcat85`
-    `ubic restart ea-tomcat85`
+    `ubic status ea-tomcat100`
+    `ubic start ea-tomcat100`
+    `ubic stop ea-tomcat100`
+    `ubic restart ea-tomcat100`
 
 There are others, `man ubic` for details.
 

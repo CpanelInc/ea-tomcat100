@@ -1,5 +1,5 @@
 #!/bin/sh
-# cpanel - ea-tomcat85                               Copyright 2018 cPanel, Inc.
+# cpanel - ea-tomcat100                               Copyright 2018 cPanel, Inc.
 #                                                           All rights Reserved.
 # copyright@cpanel.net                                         http://cpanel.net
 # This code is subject to the cPanel license. Unauthorized copying is prohibited
@@ -14,9 +14,9 @@
 # source function library
 . /etc/rc.d/init.d/functions
 
-export CATALINA_HOME=/opt/cpanel/ea-tomcat85
-export CATALINA_BASE=/opt/cpanel/ea-tomcat85
-. /opt/cpanel/ea-tomcat85/bin/setenv.sh
+export CATALINA_HOME=/opt/cpanel/ea-tomcat100
+export CATALINA_BASE=/opt/cpanel/ea-tomcat100
+. /opt/cpanel/ea-tomcat100/bin/setenv.sh
 
 tomcat_pid() {
   if [ -n "$CATALINA_PID" ] && [ -e $CATALINA_PID ]; then
@@ -28,7 +28,7 @@ tomcat_pid() {
 case $1 in
     start)
         pid=$(tomcat_pid)
-        file=/opt/cpanel/ea-tomcat85/bin/startup.sh
+        file=/opt/cpanel/ea-tomcat100/bin/startup.sh
         # no way to start tomcat
         if [ ! -x $file ]; then
             echo -e "\e[00m;31mMissing $file\e[00m"
@@ -63,7 +63,7 @@ case $1 in
         ;;
     stop)
         pid=$(tomcat_pid)
-        file=/opt/cpanel/ea-tomcat85/bin/shutdown.sh
+        file=/opt/cpanel/ea-tomcat100/bin/shutdown.sh
         if [ ! -n "$pid" ]; then
             echo -e "\e[00;31mTomcat is already shutdown\e[00m"
             ERROR=1
@@ -79,7 +79,7 @@ case $1 in
         fi
         ;;
     restart)
-        file=/usr/local/cpanel/scripts/restartsrv_ea_tomcat85
+        file=/usr/local/cpanel/scripts/restartsrv_ea_tomcat100
         if [ ! -x $file ]; then
             echo "Missing $file"
             ERROR=1

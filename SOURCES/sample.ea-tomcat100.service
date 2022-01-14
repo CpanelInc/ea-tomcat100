@@ -6,15 +6,15 @@ After=syslog.target network.target
 [Service]
 Type=forking
 
-Environment=CATALINA_HOME=/opt/cpanel/ea-tomcat85
-Environment=CATALINA_BASE=/opt/cpanel/ea-tomcat85
-Environment=CATALINA_PID=/var/run/ea-tomcat85/catalina.pid
+Environment=CATALINA_HOME=/opt/cpanel/ea-tomcat100
+Environment=CATALINA_BASE=/opt/cpanel/ea-tomcat100
+Environment=CATALINA_PID=/var/run/ea-tomcat100/catalina.pid
 
 User=tomcat
 Group=tomcat
 
-ExecStart=/opt/cpanel/ea-tomcat85/bin/startup.sh
-ExecStop=/opt/cpanel/ea-tomcat85/bin/shutdown.sh
+ExecStart=/opt/cpanel/ea-tomcat100/bin/startup.sh
+ExecStop=/opt/cpanel/ea-tomcat100/bin/shutdown.sh
 
 RestartSec=10
 Restart=always
