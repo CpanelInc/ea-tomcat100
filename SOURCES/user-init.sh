@@ -1,58 +1,67 @@
+. /opt/cpanel/ea-podman/ea-podman.sh
 . /opt/cpanel/ea-tomcat100/bin/user-functions
 . $HOME/ea-tomcat100/bin/setenv.sh
- 
-tomcat_pid() {
-  if [ -n "$CATALINA_PID" ] && [ -e $CATALINA_PID ]; then
-      cat $CATALINA_PID
-  fi
-}
 
 ERROR=0
 case $1 in
     start)
-        pid=$(tomcat_pid)
-        if [ -n "$pid" ] && ps --pid $pid 2>&1 1>/dev/null; then
-            echo -e "\e[00;33mTomcat is already running (pid: $pid)\e[00m"
+        name=`get_user_container_name "ea_tomcat100"`
+        $(is_container_name_running $name)
+        ret=$?
+        if [ $ret -eq 0 ]; then
+            echo -e "\e[00;33Tomcat 10.0 container is already running (name : $name)\e[00m"
             ERROR=1
         else
             /opt/cpanel/ea-tomcat100/bin/user-startup.sh
         fi
         ;;
     stop)
-        pid=$(tomcat_pid)
-        if [ ! -n "$pid" ] || [ ! ps --pid $pid 2>&1 1>/dev/null ]; then
-            echo -e "\e[00;31mTomcat is already shutdown\e[00m"
+        name=`get_user_container_name "ea_tomcat100"`
+        $(is_container_name_running $name)
+        ret=$?
+        if [ $ret -gt 1 ]; then
+            echo -e "\e[00;31mTomcat 10.0 container is already shutdown\e[00m"
             ERROR=1
         else
             /opt/cpanel/ea-tomcat100/bin/user-shutdown.sh
         fi
         ;;
     restart|force-reload|reload)
-        pid=$(tomcat_pid)
-        if [ -n "$pid" ] && ps --pid $pid 2>&1 1>/dev/null; then
+        name=`get_user_container_name "ea_tomcat100"`
+        $(is_container_name_running $name)
+        ret=$?
+        if [ $ret -eq 0 ]; then
             /opt/cpanel/ea-tomcat100/bin/user-shutdown.sh
         fi
 
         /opt/cpanel/ea-tomcat100/bin/user-startup.sh
         ;;
     status|fullstatus)
-        pid=$(tomcat_pid)
-        if [ -f "$CATALINA_PID" ]; then
-            if ps --pid $pid 2>&1 1>/dev/null; then
-                echo -e "\e[00;32mTomcat is running!\e[00m"
-                ERROR=0
-            else
-                echo "$CATALINA_PID found, but $pid is not running"
-                ERROR=4
-            fi
-        else
-            echo -e "\e[00;31mTomcat is currently not running.\e[00m"
+        name=`get_user_container_name "ea_tomcat100"`
+        $(is_container_name_running $name)
+        ret=$?
+        if [ $ret -gt 0 ]; then
+            echo -e "\e[00;31mTomcat 10.0 is currently not running.\e[00m"
             ERROR=3
+        else
+           echo -e "\e[00;32mTomcat 10.0 is running!\e[00m"
+           ERROR=0
+        fi  
+        ;;  
+    realstatus)
+        num_tomcat=`ps l -u $USER | grep java | grep tomcat | wc -l`
+        if [ $num_tomcat -eq 0 ]; then
+            echo -e "\e[00;31mTomcat 10.0 is currently not running.\e[00m"
+            ERROR=3
+        else
+           echo -e "\e[00;32mTomcat 10.0 is running!\e[00m"
+           ERROR=0
         fi
-        ;; 
-    *)
+        ;;
+    *)  
         echo $"Usage: $0 {start|stop|restart|status|fullstatus}"
         ERROR=2
+        ;;  
 esac
  
 exit $ERROR

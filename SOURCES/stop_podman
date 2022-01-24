@@ -1,0 +1,39 @@
+#!/usr/local/cpanel/3rdparty/bin/perl
+
+use strict;
+use warnings;
+
+package ea_tomcat100::stop_podman;
+
+require '/opt/cpanel/ea-tomcat100/bin/tomcat_access';
+require '/usr/local/cpanel/scripts/ea-podman';
+
+my $time_to_wait_for_podman_to_stop = 60;
+
+script(@ARGV) if not caller();
+
+sub script {
+    my (@args) = @_;
+
+    die "Do not run as root" if $< == 0;
+
+    my $homedir = $ENV{HOME};
+    my $user    = $ENV{USER};
+    die "Could not determine homedir" if !-e $homedir;
+
+    my $name = "ea_tomcat100$homedir";
+    $name =~ s/\//_/g;
+
+    my @cmd       = ( "podman", "stop", "$name" );
+    system(@cmd);
+
+    for my $i ( 1 .. $time_to_wait_for_podman_to_stop ) {
+        last if (!scripts::ea_podman::is_container_running($name));
+        sleep (1);
+    }
+
+    return 0;
+}
+
+1;
+

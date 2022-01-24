@@ -22,6 +22,8 @@ use App::CmdDispatch;
 use Path::Iter            ();
 use Cpanel::SafeDir::Read ();
 
+require '/usr/local/cpanel/scripts/ea-podman';
+
 my $cmds = {
     add => {
         code     => \&add,
@@ -60,6 +62,9 @@ my $cmds = {
                 Cpanel::AccessIds::do_as_user_with_exception(
                     $user,
                     sub {
+                        delete $ENV{XDG_RUNTIME_DIR};
+                        delete $ENV{XDG_SESSION_ID};
+
                         local $ENV{HOME} = $homedir;
                         my $orig_umask = umask(0027);
                         _ubic_tc($operation);
@@ -104,6 +109,8 @@ sub add {
 
     print "Adding $user’s tomcat 10.0 instance …\n";
 
+    scripts::ea_podman::ensure_user ($user);
+
     my ( $http_port, $ajp_port ) = _get_ports($user);
 
     my $curdir = Cwd::cwd();
@@ -112,6 +119,9 @@ sub add {
         sub {
             local $ENV{HOME} = $homedir;
             my $orig_umask = umask(0027);
+
+            delete $ENV{XDG_RUNTIME_DIR};
+            delete $ENV{XDG_SESSION_ID};
 
             mkdir "$homedir/ea-tomcat100";    # it may exist so don’t check it’s RV
             die "Could not create directory “$homedir/ea-tomcat100”: $!\n" if !-d "$homedir/ea-tomcat100";
@@ -188,7 +198,7 @@ sub add {
                 # Host – autoDeploy, deployOnStartup, and deployXML false
                 #   - FWiW, ASF does exploded deploys instead of ^^^
                 $host->setAttribute( autoDeploy      => "false" );
-                $host->setAttribute( deployOnStartup => "false" );
+                $host->setAttribute( deployOnStartup => "true" );
                 $host->setAttribute( deployXML       => "false" );
             }
 
@@ -197,7 +207,7 @@ sub add {
             _sysdie( "add service management" => ( qw(/usr/local/cpanel/scripts/cpuser_service_manager add ea-tomcat100), "--init-script=/opt/cpanel/ea-tomcat100/bin/user-init.sh" ) );
 
             _ubic_tc("start");
-
+           
             umask($orig_umask);
         }
     );
@@ -225,6 +235,9 @@ sub rem {
         sub {
             local $ENV{HOME} = $homedir;
             chdir $homedir or die "Could not change into “$homedir”: $!\n";
+
+            delete $ENV{XDG_RUNTIME_DIR};
+            delete $ENV{XDG_SESSION_ID};
 
             my $orig_umask = umask(0027);
             _ubic_tc("stop");
@@ -398,7 +411,7 @@ __DATA__
 
 # example from https://wiki.apache.org/tomcat/HowTo/FasterStartUp#Entropy_Source
 # Trade some security for startup speed by using non-blocking entropy:
-# CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"
+CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"
 
 # DO NOT EDIT THIS LINE OR ANYTHING BELOW THIS LINE
 . /opt/cpanel/ea-tomcat100/bin/user-setenv.sh

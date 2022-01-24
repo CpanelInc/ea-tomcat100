@@ -50,8 +50,9 @@ Source14: README.APACHE-PROXY
 Source15: README.USER-INSTANCE
 Source16: test.jsp
 Source17: README.SHARED-SERVICE-MANAGEMENT
-Source18: get_ports
+Source18: tomcat_access
 Source19: start_podman
+Source20: stop_podman
 
 # if I do not have autoreq=0, rpm build will recognize that the ea_
 # scripts need perl and some Cpanel pm's to be on the disk.
@@ -152,10 +153,11 @@ cp %{SOURCE10} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/user-init.sh
 cp %{SOURCE11} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/user-setenv.sh
 cp %{SOURCE12} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/user-shutdown.sh
 cp %{SOURCE13} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/user-startup.sh
-cp %{SOURCE18} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/get_ports
+cp %{SOURCE18} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/tomcat_access
 cp %{SOURCE19} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/start_podman
+cp %{SOURCE20} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/stop_podman
 
-sed -i "s/XYZZY/$version/" $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/start_podman
+sed -i "s/TOMCAT_VERSION/%{version}/" $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/start_podman
 
 mkdir -p $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/user-conf
 cp -r ./conf/* $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/user-conf
@@ -173,8 +175,9 @@ fi
 
 %files
 %attr(0755,root,root) /usr/local/cpanel/scripts/ea-tomcat100
-%attr(0755,root,root) /opt/cpanel/ea-tomcat100/bin/get_ports
+%attr(0755,root,root) /opt/cpanel/ea-tomcat100/bin/tomcat_access
 %attr(0755,root,root) /opt/cpanel/ea-tomcat100/bin/start_podman
+%attr(0755,root,root) /opt/cpanel/ea-tomcat100/bin/stop_podman
 %defattr(-,root,tomcat,-)
 /opt/cpanel/ea-tomcat100
 %attr(0755,root,root) /opt/cpanel/ea-tomcat100/user-conf

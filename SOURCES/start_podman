@@ -5,40 +5,50 @@ use warnings;
 
 package ea_tomcat100::start_podman;
 
-require '/opt/cpanel/ea-tomcat100/bin/get_ports';
+require '/opt/cpanel/ea-tomcat100/bin/tomcat_access';
+require '/usr/local/cpanel/scripts/ea-podman';
 
-script (@ARGV) if not caller ();
+my $time_to_wait_for_podman_to_start = 120;
+
+script(@ARGV) if not caller();
 
 sub script {
     my (@args) = @_;
 
-    die "Do not run as root" if $< == 0; 
-    die "Pass homedir" if !@args;
+    die "Do not run as root" if $< == 0;
 
-    my $homedir = $args[0];
-
-    die "Pass correct homedir" if !-e $homedir;
+    my $homedir = $ENV{HOME};
+    my $user    = $ENV{USER};
+    die "Could not determine homedir" if !-e $homedir;
 
     my $name = "ea_tomcat100$homedir";
     $name =~ s/\//_/g;
 
     my $server_xml = $homedir . "/ea-tomcat100/conf/server.xml";
 
-    if (!-e $server_xml) {
+    if ( !-e $server_xml ) {
         print "Error";
         exit;
     }
 
-    my ($http_port, $ajp_port) = split (/:/, ea_tomcat100::get_ports::get_ports ($server_xml));
+    my ( $http_port, $ajp_port ) = split( /:/, ea_tomcat100::tomcat_access::get_ports($server_xml) );
+    my @cmd;
 
-    # NOTE: Dan, tomcat:10.X-alpine does not seem to work, they do not seem to
-    # exist.
-    #
-    # What I have here is the official tomcat images are
-    # Also note: I gave it the full url, and it did not ask me to choose
+    @cmd = ( 
+        "podman", "stop", "--ignore", $name
+    );  
+    system(@cmd);
 
-    my @cmd = ("podman", "run", "-d", "--name", $name, "--rm=true", "-p", "$http_port:$http_port", "-p", "$ajp_port:$ajp_port", "-v", "~/ea-tomcat100/conf:/usr/local/tomcat/conf", "-v", "~/ea-tomcat100/logs/:/usr/local/tomcat/logs", "-v", "~/ea-tomcat100/run:/usr/local/tomcat/run", "-v", "~/ea-tomcat100/temp/:/usr/local/tomcat/temp", "-v", "~/ea-tomcat100/webapps:/usr/local/tomcat/webapps", "-v", "~/ea-tomcat100/work/:/usr/local/tomcat/work", "-e", 'CATALINA_OPTS=-Xmx100m', "-e", 'CATALINA_BASE=/usr/local/tomcat', "docker.io/library/tomcat:XYZZY");
-    system (@cmd);
+    @cmd = ( 
+        "podman", "run", "-d", "--name", $name, "--rm=true", "-p", "$http_port:$http_port", "-p", "$ajp_port:$ajp_port", "-v", "$homedir/ea-tomcat100/conf:/usr/local/tomcat/conf", "-v", "$homedir/ea-tomcat100/logs/:/usr/local/tomcat/logs", "-v", "$homedir/ea-tomcat100/run:/usr/local/tomcat/run", "-v", "$homedir/ea-tomcat100/temp/:/usr/local/tomcat/temp", "-v",
+        "$homedir/ea-tomcat100/webapps:/usr/local/tomcat/webapps", "-v", "$homedir/ea-tomcat100/work/:/usr/local/tomcat/work", "-e", 'CATALINA_OPTS=-Xmx100m', "-e", 'CATALINA_BASE=/usr/local/tomcat', "docker.io/library/tomcat:10.0.14"  
+    ); 
+    system(@cmd);
+
+    for my $i ( 1 .. $time_to_wait_for_podman_to_start ) {
+        last if (scripts::ea_podman::is_container_running($name));
+        sleep (1);
+    }
 
     return 0;
 }
