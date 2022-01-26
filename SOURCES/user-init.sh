@@ -2,6 +2,26 @@
 . /opt/cpanel/ea-tomcat100/bin/user-functions
 . $HOME/ea-tomcat100/bin/setenv.sh
 
+log_file="$HOME/ea-tomcat100/logs/user-init.log"
+echo "user-init.sh ($$): 001" >> $log_file
+lock_file="$HOME/ea-tomcat100/run/user-init.lock"
+if [ -e $lock_file ]; then
+echo "user-init.sh ($$): 002 LOCKED" >> $log_file
+    # If we detect the lockfile, ubic might be hitting too hard.
+    # wait till the lock is free, then return doing nothing
+
+    idx=0
+    while [[ -e $lock_file && $idx -lt 120 ]]
+    do
+echo "user-init.sh ($$): 003 STILL LOCKED" >> $log_file
+        idx=`/usr/bin/perl -e "print $idx + 1"`
+        sleep 1
+    done
+echo "user-init.sh ($$): 004 NO LONGER LOCKED" >> $log_file
+    exit 0;
+fi
+
+touch $lock_file
 ERROR=0
 case $1 in
     start)
@@ -63,5 +83,7 @@ case $1 in
         ERROR=2
         ;;  
 esac
- 
+
+echo "user-init.sh ($$): OUT lock removed" >> $log_file
+rm -f $lock_file 
 exit $ERROR

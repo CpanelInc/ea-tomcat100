@@ -21,16 +21,24 @@ sub script {
     my $user    = $ENV{USER};
     die "Could not determine homedir" if !-e $homedir;
 
+ea_tomcat100::tomcat_access::logit ("stop_podman: 001");
+
     my $name = "ea_tomcat100$homedir";
     $name =~ s/\//_/g;
 
+ea_tomcat100::tomcat_access::logit ("stop_podman: 002 ($name)");
     my @cmd       = ( "podman", "stop", "$name" );
     system(@cmd);
 
+ea_tomcat100::tomcat_access::logit ("stop_podman: 003");
     for my $i ( 1 .. $time_to_wait_for_podman_to_stop ) {
+ea_tomcat100::tomcat_access::logit ("stop_podman: 004");
         last if (!scripts::ea_podman::is_container_running($name));
+ea_tomcat100::tomcat_access::logit ("stop_podman: 005");
         sleep (1);
     }
+
+ea_tomcat100::tomcat_access::logit ("stop_podman: OUT");
 
     return 0;
 }

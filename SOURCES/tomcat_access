@@ -67,7 +67,7 @@ sub logit
 
     my $homedir = $ENV{HOME};
     if (open my $fh, ">>", "$homedir/ea-tomcat100/logs/tomcat_podman.log") {
-        print $fh $msg . "\n";
+        print $fh "$$: " . $msg . "\n";
         close $fh;
     }
 
