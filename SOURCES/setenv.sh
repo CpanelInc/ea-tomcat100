@@ -1,2 +1,5 @@
-export CATALINA_OPTS="$CATALINA_OPTS -server -Dfile.encoding=UTF-8 -Xms128m -Xmx6248m"
-export CATALINA_PID="/var/run/ea-tomcat100/catalina.pid"
+# Your customizations can go here, for example, CATALINA_OPTS
+
+# example from https://wiki.apache.org/tomcat/HowTo/FasterStartUp#Entropy_Source
+# Trade some security for startup speed by using non-blocking entropy:
+CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"
