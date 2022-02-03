@@ -44,7 +44,7 @@ sub add {
 
     _bail( "$host_path appears to have setup already; aborting so we don’t break anything" ) if -d "$host_path" && !_tomcat100_dir_is_empty_or_apps_only("$host_path");
 
-    print "Adding “$user’s” tomcat 10.0 instance …\n";
+    print "Adding a tomcat 10.0 instance for “$user” …\n";
 
     my $curdir = Cwd::cwd();
 
