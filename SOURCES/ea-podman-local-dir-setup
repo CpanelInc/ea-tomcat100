@@ -1,0 +1,193 @@
+#!/usr/local/cpanel/3rdparty/bin/perl
+# cpanel - ea-podman-local-dir-setup                 Copyright 2022 cPanel, Inc.
+#                                                           All rights Reserved.
+# copyright@cpanel.net                                         http://cpanel.net
+# This code is subject to the cPanel license. Unauthorized copying is prohibited
+
+use strict;
+use warnings;
+
+package scripts::ea_podman_local_dir_setup;
+
+use Cpanel::Config::LoadUserDomains ();
+use Cpanel::AccessIds               ();
+use Cpanel::JSON                    ();
+
+use File::Path::Tiny ();    # Path::Tiny’s version is overly complicated
+use Path::Tiny;
+use Capture::Tiny 'capture';
+use XML::LibXML ();
+use Cwd         ();
+use App::CmdDispatch;
+use Path::Iter            ();
+use Cpanel::SafeDir::Read ();
+
+require '/opt/cpanel/ea-podman/bin/ea-podman.pl';
+require '/opt/cpanel/ea-podman/lib/ea_podman/util.pm';
+require '/opt/cpanel/ea-podman/lib/ea_podman/subids.pm';
+
+# use ea_podman::subids;
+
+run(@ARGV) if !caller;
+
+sub run {
+    my ($host_path, @ports) = @_;
+
+    die "Must have 2 ports ($host_path) :" . @ports . ":" if @ports != 2;
+
+    return add ($host_path, @ports);
+}
+
+################
+#### commands ##
+################
+
+sub add {
+    my ($host_path, $http_port, $ajp_port) = @_;
+
+    my $user = $ENV{USER};
+    my $homedir = $ENV{HOME};
+
+    _bail( "The user already has a tomcat 10.0 instance." ) if -d "$host_path" && !_tomcat100_dir_is_empty_or_apps_only("$host_path");
+
+    print "Adding $user’s tomcat 10.0 instance …\n";
+
+    my $curdir = Cwd::cwd();
+
+    {
+        my $orig_umask = umask(0027);
+
+        ea_podman::util::ensure_su_login ();
+
+        mkdir "$host_path";    # it may exist so don’t check it’s RV
+        die "Could not create directory “$host_path" if !-d "$host_path";
+        chdir "$host_path" or die "Could not change into “$host_path";
+
+        for my $dir (qw(conf bin logs run temp webapps/ROOT work/Catalina/localhost/ROOT)) {
+            File::Path::Tiny::mk($dir) or die "Could not create directory “$dir”: $!\n";
+        }
+
+        my %symlinks = (
+            '/opt/cpanel/ea-tomcat100/README.USER-SERVICE-MANAGEMENT' => 'README.USER-SERVICE-MANAGEMENT',
+            '/opt/cpanel/ea-tomcat100/README.FASTERSTARTUP'           => 'README.FASTERSTARTUP',
+            '/opt/cpanel/ea-tomcat100/README.SECURITY'                => 'README.SECURITY',
+            '/opt/cpanel/ea-tomcat100/README.APACHE-PROXY'            => 'README.APACHE-PROXY',
+            '/opt/cpanel/ea-tomcat100/README.USER-INSTANCE'           => 'README.USER-INSTANCE',
+        );
+        for my $target ( keys %symlinks ) {
+            symlink( $target, $symlinks{$target} ) or warn "Could not symlink “$symlinks{$target}” to “$target”: $!\n";
+        }
+
+        my $data_start = tell DATA;
+        path("bin/setenv.sh")->spew(<DATA>);
+        seek( DATA, $data_start, 0 );
+
+        system("cp -r /opt/cpanel/ea-tomcat100/user-conf/* conf/");
+        system("chmod 640 conf/*");
+
+        my $dom = XML::LibXML->load_xml( location => "conf/server.xml", load_ext_dtd => 0, ext_ent_handler => sub { } );
+        $dom->findnodes('//Server[@shutdown="SHUTDOWN"]')->shift()->setAttribute( port => -1 );    # disable the shutdown port
+
+        my $ajp_connector_exists = 0;
+        for my $conn ( $dom->findnodes("//Server/Service/Connector") ) {
+
+            # hide version exposure
+            # Could set `server` in addition to xpoweredBy but:
+            #    1. it is a generic value for tomcat 4.1-10.0 so all an attacker can gelan is that it is tomcat
+            #    2. if we set it to something else it will be a known value and they will be able to
+            #       determine not only that its tomcat but also the version
+            $conn->setAttribute( xpoweredBy => "false" );
+
+            # set the ports to the user’s ports
+            if ( $conn->getAttribute('protocol') eq 'HTTP/1.1' ) {
+                $conn->setAttribute( port => $http_port );
+                $conn->removeAttribute('redirectPort');
+            }
+            elsif ( $conn->getAttribute('protocol') eq 'AJP/1.3' ) {
+                $conn->setAttribute( port => $ajp_port );
+                $conn->removeAttribute('redirectPort');
+                $conn->setAttribute( secretRequired => "false" );
+                $ajp_connector_exists = 1;
+            }
+        }
+
+        if ( !$ajp_connector_exists ) {
+
+            # Create <Connector port="10001" protocol="AJP/1.3" xpoweredBy="false"/>
+            my $ajp = $dom->createElement('Connector');
+            $ajp->setAttribute( port           => $ajp_port );
+            $ajp->setAttribute( protocol       => 'AJP/1.3' );
+            $ajp->setAttribute( xpoweredBy     => "false" );
+            $ajp->setAttribute( secretRequired => "false" );
+            $dom->findnodes('//Server/Service[@name="Catalina"]')->shift()->addChild($ajp);
+        }
+
+        my $valve = $dom->createElement("Valve");
+        $valve->setAttribute( className      => "org.apache.catalina.valves.ErrorReportValve" );
+        $valve->setAttribute( showReport     => "false" );
+        $valve->setAttribute( showServerInfo => "false" );
+        for my $host ( $dom->findnodes("//Host") ) {
+
+            # hide version exposure: Create a ErrorReportValve w/ showServerInfo and showReport attributes to false
+            $host->addChild($valve);
+
+            # Host – autoDeploy, deployOnStartup, and deployXML false
+            #   - FWiW, ASF does exploded deploys instead of ^^^
+            $host->setAttribute( autoDeploy      => "false" );
+            $host->setAttribute( deployOnStartup => "true" );
+            $host->setAttribute( deployXML       => "false" );
+        }
+
+        _write_dom( "conf/server.xml" => $dom );
+       
+        umask($orig_umask);
+    }
+
+    chdir $curdir or warn "Could not chdir back to “$curdir”: $!\n";
+    print " … done!\n";
+
+    return;
+}
+
+###############
+#### helpers ##
+###############
+
+sub _bail {
+    my ( $msg ) = @_;
+
+    chomp($msg);
+    warn "$msg\n";
+
+    exit(1);    # there is no return()ing from this lol
+}
+
+sub _write_dom {
+    my ( $path, $dom ) = @_;
+
+    # get nicely indented XML (from http://grantm.github.io/perl-libxml-by-example/dom.html#modifying-the-dom)
+    for my $node ( $dom->findnodes('//text()') ) {
+        $node->parentNode->removeChild($node) unless $node =~ /\S/;
+    }
+
+    return path($path)->spew( $dom->toString(1) );
+}
+
+sub _tomcat100_dir_is_empty_or_apps_only {
+    my ($tomcat100_dir) = @_;
+    my @contents = Cpanel::SafeDir::Read::read_dir($tomcat100_dir);
+    return 1 if !@contents || ( -d "$tomcat100_dir/webapps" && @contents == 1 );
+    return;
+}
+
+1;
+
+__DATA__
+# Your customizations can go here, for example, CATALINA_OPTS
+
+# example from https://wiki.apache.org/tomcat/HowTo/FasterStartUp#Entropy_Source
+# Trade some security for startup speed by using non-blocking entropy:
+CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"
+
+# DO NOT EDIT THIS LINE OR ANYTHING BELOW THIS LINE
+. /opt/cpanel/ea-tomcat100/bin/user-setenv.sh

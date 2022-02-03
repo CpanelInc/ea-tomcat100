@@ -24,6 +24,11 @@ use Cpanel::SafeDir::Read ();
 
 require '/usr/local/cpanel/scripts/ea-podman';
 
+# These 2 come in with ea-podman, not sure how to set this up
+# with find::bin
+# use ea_podman::util;
+# use ea_podman::subids;
+
 my $cmds = {
     add => {
         code     => \&add,
@@ -123,6 +128,8 @@ sub add {
             delete $ENV{XDG_RUNTIME_DIR};
             delete $ENV{XDG_SESSION_ID};
 
+            ea_podman::util::ensure_su_login ();
+
             mkdir "$homedir/ea-tomcat100";    # it may exist so don’t check it’s RV
             die "Could not create directory “$homedir/ea-tomcat100”: $!\n" if !-d "$homedir/ea-tomcat100";
             chdir "$homedir/ea-tomcat100" or die "Could not change into “$homedir/ea-tomcat100”: $!\n";
@@ -204,9 +211,6 @@ sub add {
 
             _write_dom( "conf/server.xml" => $dom );
 
-            _sysdie( "add service management" => ( qw(/usr/local/cpanel/scripts/cpuser_service_manager add ea-tomcat100), "--init-script=/opt/cpanel/ea-tomcat100/bin/user-init.sh" ) );
-
-            _ubic_tc("start");
            
             umask($orig_umask);
         }

@@ -42,17 +42,12 @@ Source5: cpanel-scripts-ea-tomcat100
 Source7: README.FASTERSTARTUP
 Source8: README.SECURITY
 Source9: README.USER-SERVICE-MANAGEMENT
-Source10: user-init.sh
-Source11: user-setenv.sh
-Source12: user-shutdown.sh
-Source13: user-startup.sh
 Source14: README.APACHE-PROXY
 Source15: README.USER-INSTANCE
 Source16: test.jsp
 Source17: README.SHARED-SERVICE-MANAGEMENT
-Source18: tomcat_access
-Source19: start_podman
-Source20: stop_podman
+
+Source20: ea-podman-local-dir-setup
 
 # if I do not have autoreq=0, rpm build will recognize that the ea_
 # scripts need perl and some Cpanel pm's to be on the disk.
@@ -138,7 +133,6 @@ ln -sf /var/run $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/run
 mkdir -p $RPM_BUILD_ROOT/var/run/ea-tomcat100
 
 mkdir -p $RPM_BUILD_ROOT/usr/local/cpanel/scripts
-cp %{SOURCE5} $RPM_BUILD_ROOT/usr/local/cpanel/scripts/ea-tomcat100
 
 # private instance items
 cp %{SOURCE7} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/README.FASTERSTARTUP
@@ -148,19 +142,27 @@ cp %{SOURCE14} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/README.APACHE-PROXY
 cp %{SOURCE15} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/README.USER-INSTANCE
 cp %{SOURCE16} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/test.jsp
 cp %{SOURCE17} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/README.SHARED-SERVICE-MANAGEMENT
-
-cp %{SOURCE10} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/user-init.sh
-cp %{SOURCE11} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/user-setenv.sh
-cp %{SOURCE12} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/user-shutdown.sh
-cp %{SOURCE13} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/user-startup.sh
-cp %{SOURCE18} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/tomcat_access
-cp %{SOURCE19} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/start_podman
-cp %{SOURCE20} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/stop_podman
-
-sed -i "s/TOMCAT_VERSION/%{version}/" $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/start_podman
+cp %{SOURCE20} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/
 
 mkdir -p $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/user-conf
 cp -r ./conf/* $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/user-conf
+
+cat << EOF > ea-podman.json
+{
+    "required_ports" : 2,
+    "image" : "docker.io/library/tomcat:%{version}",
+    "startup" : {
+        "-e" : ["CATALINA_OPTS=-Xmx100m", "CATALINA_BASE=/usr/local/tomcat"],
+        "-v" : [
+            "conf:/usr/local/tomcat/conf",
+            "logs:/usr/local/tomcat/logs",
+            "webapps:/usr/local/tomcat/webapps"
+        ]
+    }
+}
+EOF
+
+cp ea-podman.json $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman.json
 
 %clean
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf %{buildroot}
@@ -168,16 +170,10 @@ cp -r ./conf/* $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/user-conf
 %preun
 /usr/local/cpanel/scripts/ea-tomcat100 all stop
 
-%posttrans
-if [ -x "/usr/local/cpanel/scripts/ea-tomcat100" ]; then
-    /usr/local/cpanel/scripts/ea-tomcat100 all restart
-fi
+%post
+chmod a+x /opt/cpanel/ea-tomcat100/ea-podman-local-dir-setup
 
 %files
-%attr(0755,root,root) /usr/local/cpanel/scripts/ea-tomcat100
-%attr(0755,root,root) /opt/cpanel/ea-tomcat100/bin/tomcat_access
-%attr(0755,root,root) /opt/cpanel/ea-tomcat100/bin/start_podman
-%attr(0755,root,root) /opt/cpanel/ea-tomcat100/bin/stop_podman
 %defattr(-,root,tomcat,-)
 /opt/cpanel/ea-tomcat100
 %attr(0755,root,root) /opt/cpanel/ea-tomcat100/user-conf
