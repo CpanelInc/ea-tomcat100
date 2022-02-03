@@ -22,12 +22,6 @@ use App::CmdDispatch;
 use Path::Iter            ();
 use Cpanel::SafeDir::Read ();
 
-require '/opt/cpanel/ea-podman/bin/ea-podman.pl';
-require '/opt/cpanel/ea-podman/lib/ea_podman/util.pm';
-require '/opt/cpanel/ea-podman/lib/ea_podman/subids.pm';
-
-# use ea_podman::subids;
-
 run(@ARGV) if !caller;
 
 sub run {
@@ -45,23 +39,21 @@ sub run {
 sub add {
     my ($host_path, $http_port, $ajp_port) = @_;
 
-    my $user = $ENV{USER};
-    my $homedir = $ENV{HOME};
+    my $user = getpwent ();
+    my $homedir = ( getpwuid($>) )[7];
 
-    _bail( "The user already has a tomcat 10.0 instance." ) if -d "$host_path" && !_tomcat100_dir_is_empty_or_apps_only("$host_path");
+    _bail( "$host_path appears to have setup already; aborting so we don’t break anything" ) if -d "$host_path" && !_tomcat100_dir_is_empty_or_apps_only("$host_path");
 
-    print "Adding $user’s tomcat 10.0 instance …\n";
+    print "Adding “$user’s” tomcat 10.0 instance …\n";
 
     my $curdir = Cwd::cwd();
 
     {
         my $orig_umask = umask(0027);
 
-        ea_podman::util::ensure_su_login ();
-
-        mkdir "$host_path";    # it may exist so don’t check it’s RV
-        die "Could not create directory “$host_path" if !-d "$host_path";
-        chdir "$host_path" or die "Could not change into “$host_path";
+        mkdir $host_path;    # it may exist so don’t check it’s RV
+        die "Could not create directory “$host_path”" if !-d "$host_path";
+        chdir "$host_path" or die "Could not change into “$host_path”";
 
         for my $dir (qw(conf bin logs run temp webapps/ROOT work/Catalina/localhost/ROOT)) {
             File::Path::Tiny::mk($dir) or die "Could not create directory “$dir”: $!\n";
