@@ -26,17 +26,19 @@ You simply need to configure your web server to proxy a given URI to the appropr
 
 For example:
 
-1. given an AJP port of `11111` (can be found in the instance’s conf/server.xml)
-2. assuming you want `example.com/docs` to be your tomcat apps
+* given an AJP port of `11111` (can be found in the instance’s conf/server.xml)
+* assuming you want `example.com/docs` to be your tomcat apps
 
-An [include for `example.com`](https://docs.cpanel.net/ea4/apache/modify-apache-virtual-hosts-with-include-files/) would look like this:
+You’d need to:
 
+1. create a `ProxyPass` include for Apache.
+   * An [include for `example.com`](https://docs.cpanel.net/ea4/apache/modify-apache-virtual-hosts-with-include-files/) would look like this:
 ```
 <IfModule proxy_ajp_module>
     ProxyPass "/docs" "ajp://127.0.0.1:11111/docs"
 </IfModule>
 ```
+2. restart apache
+3. Hit example.com/docs to ensure it took effect
 
-Just restart apache and it should take effect.
-
-**Note**: The ajp module in that example is brought in as a requirement of \`ea-tomcat100`.
+**Note**: The ajp module in that example is brought in as a requirement of `ea-tomcat100`.
