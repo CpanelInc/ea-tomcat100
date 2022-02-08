@@ -58,8 +58,6 @@ sub add {
             symlink( $target, $symlinks{$target} ) or warn "Could not symlink “$symlinks{$target}” to “$target”: $!\n";
         }
 
-        path("/opt/cpanel/ea-tomcat100/setenv.sh")->copy("bin/setenv.sh")->chmod(0750);
-
         system("cp -r /opt/cpanel/ea-tomcat100/user-conf/* conf/");
         system("chmod -r 640 conf/*");
 

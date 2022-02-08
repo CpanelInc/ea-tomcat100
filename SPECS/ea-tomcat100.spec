@@ -38,7 +38,6 @@ Source0: https://www-us.apache.org/dist/tomcat/tomcat-8/v%{version}/bin/apache-t
 Source1: ea-podman-local-dir-setup
 Source2: README.md
 Source3: test.jsp
-Source4: setenv.sh
 
 # if I do not have autoreq=0, rpm build will recognize that the ea_
 # scripts need perl and some Cpanel pm's to be on the disk.
@@ -80,7 +79,6 @@ cp %{SOURCE2} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/README.md
 cp %{SOURCE3} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/test.jsp
 
 mkdir -p $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin
-cp %{SOURCE4} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin/setenv.sh
 
 cat << EOF > ea-podman.json
 {
@@ -110,7 +108,6 @@ cp ea-podman.json $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman.json
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/ea-podman.json
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/README.md
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/test.jsp
-%config(noreplace) %attr(0755,root,tomcat) /opt/cpanel/ea-tomcat100/bin/setenv.sh
 %config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/server.xml
 %config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/context.xml
 %config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/jaspic-providers.xml
