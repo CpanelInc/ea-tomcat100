@@ -9,6 +9,7 @@ package ea_tomcat100::find_latest_version;
 
 use strict;
 use warnings;
+use File::chdir;
 
 use lib "../ea-tools/lib/ea4_tool";    # assumes ea-tools is checked out next to this repo
 use ea4_tool::util ();
@@ -24,20 +25,23 @@ unless ( caller() ) {
 sub _get_required {
     my ($http) = @_;
 
-    my $res = $http->get("https://tomcat.apache.org/download-10.cgi");
-    if ( !$res->{success} ) {
-        die "Could not GET tomcat100 dist page ($res->{status} $res->{reason})\n";
+    local $CWD = ea4_tool::util::get_path_of_repo("ea-tomcat100");
+    my $specfile = ea4_tool::util::specfile($CWD);
+    my $version  = ea4_tool::util::spec_get_version($specfile);
+
+    my ($cur_minor) = reverse( split( /\./, $version, 3 ) );
+    my $new_minor = $cur_minor + 2;
+
+    my $res = $http->get("https://registry.hub.docker.com/v2/repositories/library/tomcat/tags/10.0.$new_minor");
+    if ( !$res->{success} && !$res->{status} ne "404" ) {
+        die "Could not GET tomcat 10.0 tag ($res->{status} $res->{reason})\n";
+    }
+    elsif ( $res->{success} ) {
+        $version = "10.0.$new_minor";
     }
 
-    my @tomcat100 = ( $res->{content} =~ m{10\.0\.[0-9][0-9]+}g );
-
-    if ( !@tomcat100 ) {
-        die "Could not find tomcat100 versions\n";
-    }
-
-    my $version = "$tomcat100[0]";
-    my $name    = "apache-tomcat-$version.tar.gz";
-    my $url     = "https://downloads.apache.org/tomcat/tomcat-10/v$version/bin/$name";
+    my $name = "apache-tomcat-$version.tar.gz";
+    my $url  = "https://downloads.apache.org/tomcat/tomcat-10/v$version/bin/$name";
 
     return ( $version, $url, $name );
 }
@@ -48,7 +52,7 @@ sub _add_sum {
     my $checksum_url = "https://www.apache.org/dist/tomcat/tomcat-10/v$hr->{version}/bin/$hr->{tarball}{name}.sha512";
     my $res          = $http->get($checksum_url);
     if ( !$res->{success} ) {
-        die "Could not GET tomcat100 SHASUMS page ($res->{status} $res->{reason})\n";
+        die "Could not GET tomcat 10.0 SHASUMS page ($res->{status} $res->{reason})\n";
     }
 
     my $name     = $hr->{tarball}{name};

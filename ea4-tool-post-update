@@ -1,0 +1,47 @@
+#!/usr/local/cpanel/3rdparty/bin/perl
+# cpanel - ea4-tool-post-update                 Copyright(c) 2022 cPanel, L.L.C.
+#                                                           All rights Reserved.
+# copyright@cpanel.net                                         http://cpanel.net
+# This code is subject to the cPanel license. Unauthorized copying is prohibited
+
+package ea_tomcat100::ea4_tool_post_update;
+
+use strict;
+use warnings;
+
+use lib "../ea-tools/lib/ea4_tool";    # assumes ea-tools is checked out next to this repo
+use ea4_tool::util ();
+use Cpanel::JSON   ();
+use File::chdir;
+
+exit( run(@ARGV) ? 0 : 1 ) if !caller;
+
+sub run {
+    my ( $old_ver, $new_ver ) = @_;
+    my $ea_podman_json = "./ea-podman.json";
+
+    my $ea_podman_conf = Cpanel::JSON::LoadFile($ea_podman_json);
+    die "./ea-podman.json does not have `image`\n" if !exists $ea_podman_conf->{image} || length( $ea_podman_conf->{image} );
+    if ( $ea_podman_conf->{image} =~ m/:\Q$old_ver\E([^0-9].*)$/ ) {
+        $ea_podman_conf->{image} =~ s/:\Q$old_ver\E([^0-9].*)$/:$new_ver$1/;
+    }
+    else {
+        die "$ea_podman_conf->{image}” does not contain the tag “$old_ver”. `./ea-podman.json` may need `image` adjusted\n";
+    }
+
+    Cpanel::JSON::DumpFile( $ea_podman_json, Cpanel::JSON::pretty_canonical_dump($ea_podman_conf) );
+
+    print "Committing $ea_podman_json file change …\n";
+    my $git    = ea4_tool::util::git($CWD);
+    my $branch = $git->current_branch();
+
+    $git->run( add    => $ea_podman_json );
+    $git->run( commit => "-m", "$branch: ea4-tool-post-update update $ea_podman_json `image` to $new_ver ($ea_podman_conf->{image})" );
+    ea4_tool::util::pushup( $git, $branch );
+
+    print "Done!\n";
+    return 1;
+
+}
+
+1;
