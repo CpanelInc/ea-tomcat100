@@ -18,10 +18,10 @@ exit( run(@ARGV) ? 0 : 1 ) if !caller;
 
 sub run {
     my ( $old_ver, $new_ver ) = @_;
-    my $ea_podman_json = "./ea-podman.json";
+    my $ea_podman_json = "./SOURCES/ea-podman.json";
 
     my $ea_podman_conf = Cpanel::JSON::LoadFile($ea_podman_json);
-    die "./ea-podman.json does not have `image`\n" if !exists $ea_podman_conf->{image} || length( $ea_podman_conf->{image} );
+    die "$ea_podman_json does not have `image`\n" if !exists $ea_podman_conf->{image} || length( $ea_podman_conf->{image} );
     if ( $ea_podman_conf->{image} =~ m/:\Q$old_ver\E([^0-9].*)$/ ) {
         $ea_podman_conf->{image} =~ s/:\Q$old_ver\E([^0-9].*)$/:$new_ver$1/;
     }
