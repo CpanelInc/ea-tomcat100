@@ -151,7 +151,7 @@ sub _write_dom {
 
 sub _tomcat100_dir_is_empty_or_apps_only {
     my ($tomcat100_dir) = @_;
-    my @contents = path($tomcat100_dir)->->children;
+    my @contents = path($tomcat100_dir)->children;
     return 1 if !@contents || ( -d "$tomcat100_dir/webapps" && @contents == 1 );
     return;
 }
