@@ -28,7 +28,7 @@ Vendor:  cPanel, Inc.
 Summary: Tomcat
 Version: 10.0.14
 # Doing release_prefix this way for Release allows for OBS-proof versioning, See EA-4572 for more details
-%define release_prefix 1
+%define release_prefix 2
 Release: %{release_prefix}%{?dist}.cpanel
 License: Apache License, 2.0
 Group:   System Environment/Daemons
@@ -103,29 +103,16 @@ cp ea-podman.json $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman.json
 %files
 %defattr(-,root,root,-)
 /opt/cpanel/ea-tomcat100
-%attr(0755,root,root) /opt/cpanel/ea-tomcat100/user-conf
+%attr(0644,root,root) /opt/cpanel/ea-tomcat100
 %attr(0755,root,root) /opt/cpanel/ea-tomcat100/ea-podman-local-dir-setup
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/ea-podman.json
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/README.md
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/test.jsp
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/server.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/context.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/jaspic-providers.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/jaspic-providers.xsd
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/tomcat-users.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/tomcat-users.xsd
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/web.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/catalina.policy
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/catalina.properties
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/conf/logging.properties
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/webapps/ROOT/WEB-INF/web.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/webapps/manager/META-INF/context.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/webapps/manager/WEB-INF/web.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/webapps/host-manager/META-INF/context.xml
-%config(noreplace) %attr(0640,root,tomcat) /opt/cpanel/ea-tomcat100/webapps/host-manager/WEB-INF/web.xml
-
 
 %changelog
+* Tue Feb 08 2022 Dan Muey <dan@pcanel.net> - 10.0.14-2
+- ZC-9724: clean out tomcat 8.5/EA3 cruft and some fixes
+
 * Fri Jan 14 2022 Julian Brown <julian.brown@webpros.com> - 10.0.14-1
 - ZC-9647: Initial Build of tomcat 10.0 using podman
 

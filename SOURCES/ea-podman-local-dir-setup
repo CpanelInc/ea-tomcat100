@@ -31,8 +31,7 @@ sub run {
 sub add {
     my ( $host_path, $http_port, $ajp_port ) = @_;
 
-    my $user    = getpwent();
-    my $homedir = ( getpwuid($>) )[7];
+    my ( $user, $homedir ) = ( getpwuid($>) )[ 0, 7 ];
 
     _bail("$host_path appears to have setup already; aborting so we don’t break anything") if -d $host_path && !_tomcat100_dir_is_empty_or_apps_only($host_path);
 
