@@ -103,7 +103,7 @@ cp ea-podman.json $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman.json
 %files
 %defattr(-,root,root,-)
 /opt/cpanel/ea-tomcat100
-%attr(0644,root,root) /opt/cpanel/ea-tomcat100
+%attr(0655,root,root) /opt/cpanel/ea-tomcat100
 %attr(0755,root,root) /opt/cpanel/ea-tomcat100/ea-podman-local-dir-setup
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/ea-podman.json
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/README.md
