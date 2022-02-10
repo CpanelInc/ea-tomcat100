@@ -2,7 +2,7 @@
 
 ## Security
 
-Please read https://tomcat.apache.org/tomcat-8.5-doc/security-howto.html
+Please read https://tomcat.apache.org/tomcat-10.1-doc/security-howto.html
 to find ways to increase security of your tomcat instance.
 
 ## Faster Startup
