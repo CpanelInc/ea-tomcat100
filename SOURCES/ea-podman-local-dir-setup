@@ -9,27 +9,19 @@ use warnings;
 
 package scripts::ea_podman_local_dir_setup;
 
-use Cpanel::Config::LoadUserDomains ();
-use Cpanel::AccessIds               ();
-use Cpanel::JSON                    ();
-
 use File::Path::Tiny ();    # Path::Tiny’s version is overly complicated
-use Path::Tiny;
-use Capture::Tiny 'capture';
+use Path::Tiny 'path';
 use XML::LibXML ();
 use Cwd         ();
-use App::CmdDispatch;
-use Path::Iter            ();
-use Cpanel::SafeDir::Read ();
 
 run(@ARGV) if !caller;
 
 sub run {
-    my ($host_path, @ports) = @_;
+    my ( $host_path, @ports ) = @_;
 
     die "Must have 2 ports ($host_path) :" . @ports . ":" if @ports != 2;
 
-    return add ($host_path, @ports);
+    return add( $host_path, @ports );
 }
 
 ################
@@ -37,12 +29,11 @@ sub run {
 ################
 
 sub add {
-    my ($host_path, $http_port, $ajp_port) = @_;
+    my ( $host_path, $http_port, $ajp_port ) = @_;
 
-    my $user = getpwent ();
-    my $homedir = ( getpwuid($>) )[7];
+    my ( $user, $homedir ) = ( getpwuid($>) )[ 0, 7 ];
 
-    _bail( "$host_path appears to have setup already; aborting so we don’t break anything" ) if -d "$host_path" && !_tomcat100_dir_is_empty_or_apps_only("$host_path");
+    _bail("$host_path appears to have setup already; aborting so we don’t break anything") if -d $host_path && !_tomcat100_dir_is_empty_or_apps_only($host_path);
 
     print "Adding a tomcat 10.0 instance for “$user” …\n";
 
@@ -52,30 +43,22 @@ sub add {
         my $orig_umask = umask(0027);
 
         mkdir $host_path;    # it may exist so don’t check it’s RV
-        die "Could not create directory “$host_path”" if !-d "$host_path";
-        chdir "$host_path" or die "Could not change into “$host_path”";
+        die "Could not create directory “$host_path”" if !-d $host_path;
+        chdir $host_path or die "Could not change into “$host_path”: $!\n";
 
         for my $dir (qw(conf bin logs run temp webapps/ROOT work/Catalina/localhost/ROOT)) {
             File::Path::Tiny::mk($dir) or die "Could not create directory “$dir”: $!\n";
         }
 
         my %symlinks = (
-            '/opt/cpanel/ea-tomcat100/README.USER-SERVICE-MANAGEMENT' => 'README.USER-SERVICE-MANAGEMENT',
-            '/opt/cpanel/ea-tomcat100/README.FASTERSTARTUP'           => 'README.FASTERSTARTUP',
-            '/opt/cpanel/ea-tomcat100/README.SECURITY'                => 'README.SECURITY',
-            '/opt/cpanel/ea-tomcat100/README.APACHE-PROXY'            => 'README.APACHE-PROXY',
-            '/opt/cpanel/ea-tomcat100/README.USER-INSTANCE'           => 'README.USER-INSTANCE',
+            '/opt/cpanel/ea-tomcat100/README.md' => 'README.md',
         );
         for my $target ( keys %symlinks ) {
             symlink( $target, $symlinks{$target} ) or warn "Could not symlink “$symlinks{$target}” to “$target”: $!\n";
         }
 
-        my $data_start = tell DATA;
-        path("bin/setenv.sh")->spew(<DATA>);
-        seek( DATA, $data_start, 0 );
-
         system("cp -r /opt/cpanel/ea-tomcat100/user-conf/* conf/");
-        system("chmod 640 conf/*");
+        system("chmod -R 640 conf/*");
 
         my $dom = XML::LibXML->load_xml( location => "conf/server.xml", load_ext_dtd => 0, ext_ent_handler => sub { } );
         $dom->findnodes('//Server[@shutdown="SHUTDOWN"]')->shift()->setAttribute( port => -1 );    # disable the shutdown port
@@ -131,7 +114,7 @@ sub add {
         }
 
         _write_dom( "conf/server.xml" => $dom );
-       
+
         umask($orig_umask);
     }
 
@@ -146,7 +129,7 @@ sub add {
 ###############
 
 sub _bail {
-    my ( $msg ) = @_;
+    my ($msg) = @_;
 
     chomp($msg);
     warn "$msg\n";
@@ -167,19 +150,9 @@ sub _write_dom {
 
 sub _tomcat100_dir_is_empty_or_apps_only {
     my ($tomcat100_dir) = @_;
-    my @contents = Cpanel::SafeDir::Read::read_dir($tomcat100_dir);
+    my @contents = path($tomcat100_dir)->children;
     return 1 if !@contents || ( -d "$tomcat100_dir/webapps" && @contents == 1 );
     return;
 }
 
 1;
-
-__DATA__
-# Your customizations can go here, for example, CATALINA_OPTS
-
-# example from https://wiki.apache.org/tomcat/HowTo/FasterStartUp#Entropy_Source
-# Trade some security for startup speed by using non-blocking entropy:
-CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"
-
-# DO NOT EDIT THIS LINE OR ANYTHING BELOW THIS LINE
-. /opt/cpanel/ea-tomcat100/bin/user-setenv.sh
