@@ -15,7 +15,7 @@ cp $SOURCE3 $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/test.jsp
 mkdir -p $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/bin
 cat << EOF > ea-podman.json
 {
-    "required_ports" : 2,
+    "ports" : [8080, 8009],
     "image" : "docker.io/library/tomcat:$version",
     "startup" : {
         "-e" : ["CATALINA_OPTS=-Xmx100m", "CATALINA_BASE=/usr/local/tomcat"],
