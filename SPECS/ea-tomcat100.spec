@@ -39,6 +39,8 @@ Source1: ea-podman-local-dir-setup
 Source2: README.md
 Source3: test.jsp
 
+Source4: pkg.prerm
+
 # if I do not have autoreq=0, rpm build will recognize that the ea_
 # scripts need perl and some Cpanel pm's to be on the disk.
 # unfortunately they cannot be satisfied via the requires: tags.
@@ -96,6 +98,10 @@ cat << EOF > ea-podman.json
 EOF
 
 cp ea-podman.json $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman.json
+
+%preun
+
+%include %{SOURCE4}
 
 %clean
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf %{buildroot}
