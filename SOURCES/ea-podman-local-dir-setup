@@ -75,11 +75,10 @@ sub add {
 
             # set the ports to the user’s ports
             if ( $conn->getAttribute('protocol') eq 'HTTP/1.1' ) {
-                $conn->setAttribute( port => $http_port );
                 $conn->removeAttribute('redirectPort');
             }
             elsif ( $conn->getAttribute('protocol') eq 'AJP/1.3' ) {
-                $conn->setAttribute( port => $ajp_port );
+                $conn->setAttribute( port => 8009 );
                 $conn->removeAttribute('redirectPort');
                 $conn->setAttribute( secretRequired => "false" );
                 $ajp_connector_exists = 1;
@@ -88,9 +87,9 @@ sub add {
 
         if ( !$ajp_connector_exists ) {
 
-            # Create <Connector port="10001" protocol="AJP/1.3" xpoweredBy="false"/>
+            # Create <Connector port="8009" protocol="AJP/1.3" xpoweredBy="false"/>
             my $ajp = $dom->createElement('Connector');
-            $ajp->setAttribute( port           => $ajp_port );
+            $ajp->setAttribute( port           => 8009 );
             $ajp->setAttribute( protocol       => 'AJP/1.3' );
             $ajp->setAttribute( xpoweredBy     => "false" );
             $ajp->setAttribute( secretRequired => "false" );
