@@ -81,6 +81,11 @@ sub add {
                 $conn->setAttribute( port => 8009 );
                 $conn->removeAttribute('redirectPort');
                 $conn->setAttribute( secretRequired => "false" );
+
+                # don’t listen on just 127.0.0.1 or you can’t do AJP proxy
+                # this is normally a undesirable but since its being done in a podman container its ok
+                $conn->setAttribute( address => "0.0.0.0" );
+
                 $ajp_connector_exists = 1;
             }
         }
@@ -93,6 +98,11 @@ sub add {
             $ajp->setAttribute( protocol       => 'AJP/1.3' );
             $ajp->setAttribute( xpoweredBy     => "false" );
             $ajp->setAttribute( secretRequired => "false" );
+
+            # don’t listen on just 127.0.0.1 or you can’t do AJP proxy
+            # this is normally a undesirable but since its being done in a podman container its ok
+            $ajp->setAttribute( address => "0.0.0.0" );
+
             $dom->findnodes('//Server/Service[@name="Catalina"]')->shift()->addChild($ajp);
         }
 
