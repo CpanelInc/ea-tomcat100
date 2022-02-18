@@ -38,7 +38,6 @@ Source0: https://www-us.apache.org/dist/tomcat/tomcat-8/v%{version}/bin/apache-t
 Source1: ea-podman-local-dir-setup
 Source2: README.md
 Source3: test.jsp
-
 Source4: pkg.prerm
 
 # if I do not have autoreq=0, rpm build will recognize that the ea_
@@ -47,7 +46,7 @@ Source4: pkg.prerm
 Autoreq: 0
 
 Requires: ea-apache24-mod_proxy_ajp
-Requires:       ea-podman
+Requires: ea-podman
 
 %description
 Tomcat is the servlet container that is used in the official Reference
@@ -68,7 +67,6 @@ to be a collaboration of the best-of-breed developers from around the world.
 %install
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf %{buildroot}
 mkdir -p $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100
-cp -r ./* $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100
 cp %{SOURCE1} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman-local-dir-setup
 cp %{SOURCE2} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/README.md
 cp %{SOURCE3} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/test.jsp
@@ -82,7 +80,7 @@ cp %{SOURCE3} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/test.jsp
 
 mkdir -p $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/bin
 
-cat << EOF > ea-podman.json
+cat << EOF > $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman.json
 {
     "ports" : [8080, 8009],
     "image" : "docker.io/library/tomcat:%{version}",
@@ -96,8 +94,6 @@ cat << EOF > ea-podman.json
     }
 }
 EOF
-
-cp ea-podman.json $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman.json
 
 %preun
 
