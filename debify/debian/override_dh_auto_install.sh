@@ -3,7 +3,6 @@
 source debian/vars.sh
 
 mkdir -p $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100
-cp -r ./* $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100
 cp $SOURCE1 $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/ea-podman-local-dir-setup
 cp $SOURCE2 $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/README.md
 cp $SOURCE3 $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/test.jsp
