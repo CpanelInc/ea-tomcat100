@@ -11,6 +11,7 @@ cp -r ./conf/* $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/user-conf
 cp $SOURCE1 $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/ea-podman-local-dir-setup
 cp $SOURCE2 $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/README.md
 cp $SOURCE3 $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/test.jsp
+echo -n "$version-$release_prefix" > $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/pkg-version
 mkdir -p $DEB_INSTALL_ROOT/opt/cpanel/ea-tomcat100/bin
 cat << EOF > ea-podman.json
 {

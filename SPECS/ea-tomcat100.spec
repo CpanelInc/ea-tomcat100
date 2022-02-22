@@ -70,6 +70,7 @@ mkdir -p $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100
 cp %{SOURCE1} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/ea-podman-local-dir-setup
 cp %{SOURCE2} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/README.md
 cp %{SOURCE3} $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/test.jsp
+echo -n "%{version}-%{release_prefix}" > $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/pkg-version
 
 mkdir -p $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/user-conf
 cp -r ./conf/* $RPM_BUILD_ROOT/opt/cpanel/ea-tomcat100/user-conf
@@ -110,6 +111,7 @@ EOF
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/ea-podman.json
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/README.md
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/test.jsp
+%attr(0644,root,root) /opt/cpanel/ea-tomcat100/pkg-version
 
 %changelog
 * Tue Feb 08 2022 Dan Muey <dan@pcanel.net> - 10.0.14-2
