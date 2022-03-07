@@ -50,13 +50,6 @@ sub add {
             File::Path::Tiny::mk($dir) or die "Could not create directory “$dir”: $!\n";
         }
 
-        my %symlinks = (
-            '/opt/cpanel/ea-tomcat100/README.md' => 'README.md',
-        );
-        for my $target ( keys %symlinks ) {
-            symlink( $target, $symlinks{$target} ) or warn "Could not symlink “$symlinks{$target}” to “$target”: $!\n";
-        }
-
         system("cp -r /opt/cpanel/ea-tomcat100/user-conf/* conf/");
         system("chmod -R 640 conf/*");
 
