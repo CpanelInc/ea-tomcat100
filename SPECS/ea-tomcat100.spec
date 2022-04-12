@@ -28,7 +28,7 @@ Vendor:  cPanel, Inc.
 Summary: Tomcat
 Version: 10.0.14
 # Doing release_prefix this way for Release allows for OBS-proof versioning, See EA-4572 for more details
-%define release_prefix 2
+%define release_prefix 3
 Release: %{release_prefix}%{?dist}.cpanel
 License: Apache License, 2.0
 Group:   System Environment/Daemons
@@ -114,6 +114,9 @@ EOF
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/pkg-version
 
 %changelog
+* Thu Mar 31 2022 Dan Muey <dan@cpanel.net> - 10.0.14-3
+- ZC-9892: Correct default `deployOnStartup`, Set `unpackWARs` to false initially
+
 * Tue Feb 08 2022 Dan Muey <dan@pcanel.net> - 10.0.14-2
 - ZC-9724: clean out tomcat 8.5/EA3 cruft and some fixes
 
