@@ -9,7 +9,6 @@ package ea_tomcat100::find_latest_version;
 
 use strict;
 use warnings;
-use File::chdir;
 
 use lib "../ea-tools/lib/ea4_tool";    # assumes ea-tools is checked out next to this repo
 use ea4_tool::util ();
@@ -25,20 +24,7 @@ unless ( caller() ) {
 sub _get_required {
     my ($http) = @_;
 
-    local $CWD = ea4_tool::util::get_path_of_repo("ea-tomcat100");
-    my $specfile = ea4_tool::util::specfile($CWD);
-    my $version  = ea4_tool::util::spec_get_version($specfile);
-
-    my ($cur_minor) = reverse( split( /\./, $version, 3 ) );
-    my $new_minor = $cur_minor + 2;
-
-    my $res = $http->get("https://registry.hub.docker.com/v2/repositories/library/tomcat/tags/10.0.$new_minor");
-    if ( !$res->{success} && !$res->{status} ne "404" ) {
-        die "Could not GET tomcat 10.0 tag ($res->{status} $res->{reason})\n";
-    }
-    elsif ( $res->{success} ) {
-        $version = "10.0.$new_minor";
-    }
+    my $version = ea4_tool::util::get_docker_hub_newest_release( name => "tomcat", namespace => "library", minor => "10.0", increment => 2 );
 
     my $name = "apache-tomcat-$version.tar.gz";
     my $url  = "https://downloads.apache.org/tomcat/tomcat-10/v$version/bin/$name";
