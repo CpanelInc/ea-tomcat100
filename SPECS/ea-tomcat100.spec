@@ -26,9 +26,9 @@
 Name:    ea-tomcat100
 Vendor:  cPanel, Inc.
 Summary: Tomcat
-Version: 10.0.14
+Version: 10.0.20
 # Doing release_prefix this way for Release allows for OBS-proof versioning, See EA-4572 for more details
-%define release_prefix 3
+%define release_prefix 1
 Release: %{release_prefix}%{?dist}.cpanel
 License: Apache License, 2.0
 Group:   System Environment/Daemons
@@ -114,6 +114,9 @@ EOF
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/pkg-version
 
 %changelog
+* Tue May 10 2022 Dan Muey <dan@cpanel.net> - 10.0.20-1
+- EA-10698: Update ea-tomcat100 from v10.0.14 to v10.0.20
+
 * Thu Mar 31 2022 Dan Muey <dan@cpanel.net> - 10.0.14-3
 - ZC-9892: Correct default `deployOnStartup`, Set `unpackWARs` to false initially
 
