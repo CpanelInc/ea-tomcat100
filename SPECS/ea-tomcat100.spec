@@ -19,16 +19,12 @@
 %global with_systemd 0
 %endif
 
-%if 0%{?rhel} >= 8
-%global debug_package %{nil}
-%endif
-
 Name:    ea-tomcat100
 Vendor:  cPanel, Inc.
 Summary: Tomcat
 Version: 10.0.20
 # Doing release_prefix this way for Release allows for OBS-proof versioning, See EA-4572 for more details
-%define release_prefix 1
+%define release_prefix 2
 Release: %{release_prefix}%{?dist}.cpanel
 License: Apache License, 2.0
 Group:   System Environment/Daemons
@@ -114,6 +110,9 @@ EOF
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/pkg-version
 
 %changelog
+* Tue May 09 2023 Brian Mendoza <brian.mendoza@cpanel.net> - 10.0.20-2
+- ZC-10936: Clean up Makefile and remove debug-package-nil
+
 * Tue May 10 2022 Dan Muey <dan@cpanel.net> - 10.0.20-1
 - EA-10698: Update ea-tomcat100 from v10.0.14 to v10.0.20
 
