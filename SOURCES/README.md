@@ -26,7 +26,9 @@ To determine which method is the best for you, read [Tomcat’s Security](https:
 
 It is managed by the `ea-podman` system.
 
-`/usr/local/cpanel/scripts/ea-podman hint` to get started.
+* https://docs.cpanel.net/ea4/containers/the-ea-podman-script/
+  * via CLI `/usr/local/cpanel/scripts/ea-podman hint` to get started
+* https://docs.cpanel.net/ea4/containers/tomcat-via-containers/
 
 ## I want to access my apps via URI and not need a port number
 
