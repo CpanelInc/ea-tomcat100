@@ -24,7 +24,7 @@ Vendor:  cPanel, Inc.
 Summary: Tomcat
 Version: 10.0.20
 # Doing release_prefix this way for Release allows for OBS-proof versioning, See EA-4572 for more details
-%define release_prefix 2
+%define release_prefix 3
 Release: %{release_prefix}%{?dist}.cpanel
 License: Apache License, 2.0
 Group:   System Environment/Daemons
@@ -110,6 +110,9 @@ EOF
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/pkg-version
 
 %changelog
+* Tue Jun 20 2023 Dan Muey <dan@cpanel.net> - 10.0.20-3
+- ZC-11022: Add deployment info to user readme
+
 * Tue May 09 2023 Brian Mendoza <brian.mendoza@cpanel.net> - 10.0.20-2
 - ZC-10936: Clean up Makefile and remove debug-package-nil
 

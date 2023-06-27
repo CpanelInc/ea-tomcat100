@@ -14,11 +14,21 @@ to find ways to improve the startup time fo your tomcat instance.
 
 `/opt/cpanel/ea-tomcat100/test.jsp` is a handy JSP test script that you can copy to try out your instance.
 
+See _How do I deploy my code?_ to learn about deployment.
+
+## How do I deploy my code?
+
+There are various ways to deploy your code, each with its own security implications. The method that you use will depend on your needs and circumstances. Our default configuration is designed to allow you to make informed choices and pick the best method for your use case.
+
+To determine which method is the best for you, read [Tomcat’s Security](https://tomcat.apache.org/tomcat-10.1-doc/security-howto.html) documentation. Then, read the [Tomcat Web Application Deployment](https://tomcat.apache.org/tomcat-10.1-doc/deployer-howto.html) documentation to choose the method you wish to use.
+
 ## How do I start/stop/etc my container?
 
 It is managed by the `ea-podman` system.
 
-`/usr/local/cpanel/scripts/ea-podman hint` to get started.
+* https://docs.cpanel.net/ea4/containers/the-ea-podman-script/
+  * via CLI `/usr/local/cpanel/scripts/ea-podman hint` to get started
+* https://docs.cpanel.net/ea4/containers/tomcat-via-containers/
 
 ## I want to access my apps via URI and not need a port number
 
