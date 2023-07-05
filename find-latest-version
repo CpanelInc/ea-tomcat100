@@ -24,7 +24,7 @@ unless ( caller() ) {
 sub _get_required {
     my ($http) = @_;
 
-    my $version = ea4_tool::util::get_docker_hub_newest_release( name => "tomcat", namespace => "library", minor => "10.1", increment => 2 );
+    my $version = ea4_tool::util::get_docker_hub_newest_release( name => "tomcat", namespace => "library", minor => "10.0", increment => 2 );
 
     my $name = "apache-tomcat-$version.tar.gz";
     my $url  = "https://downloads.apache.org/tomcat/tomcat-10/v$version/bin/$name";
