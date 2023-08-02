@@ -21,14 +21,14 @@
 
 Name:    ea-tomcat100
 Vendor:  cPanel, Inc.
-Summary: Tomcat
+Summary: EOL Tomcat
 Version: 10.0.20
 # Doing release_prefix this way for Release allows for OBS-proof versioning, See EA-4572 for more details
-%define release_prefix 3
+%define release_prefix 4
 Release: %{release_prefix}%{?dist}.cpanel
 License: Apache License, 2.0
 Group:   System Environment/Daemons
-URL: http://tomcat.apache.org/
+URL: https://tomcat.apache.org/tomcat-10.0-eol.html
 
 Source0: https://www-us.apache.org/dist/tomcat/tomcat-8/v%{version}/bin/apache-tomcat-%{version}.tar.gz
 Source1: ea-podman-local-dir-setup
@@ -45,6 +45,8 @@ Requires: ea-apache24-mod_proxy_ajp
 Requires: ea-podman
 
 %description
+Tomcat 10.0 has reached End of Life.
+
 Tomcat is the servlet container that is used in the official Reference
 Implementation for the Java Servlet and JavaServer Pages technologies.
 The Java Servlet and JavaServer Pages specifications are developed by
@@ -110,6 +112,9 @@ EOF
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/pkg-version
 
 %changelog
+* Wed Aug 02 2023 Julian Brown <julian.brown@cpanel.net> - 10.0.20-4
+- ZC-11053: Mark as EOL
+
 * Tue Jun 20 2023 Dan Muey <dan@cpanel.net> - 10.0.20-3
 - ZC-11022: Add deployment info to user readme
 
