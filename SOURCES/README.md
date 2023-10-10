@@ -7,8 +7,8 @@ to find ways to increase security of your tomcat instance.
 
 ## Faster Startup
 
-Please read https://wiki.apache.org/tomcat/HowTo/FasterStartUp
-to find ways to improve the startup time fo your tomcat instance.
+Please read https://go.cpanel.net/TomcatFastStart
+to find ways to improve the startup time for your tomcat instance.
 
 ## Test Script
 
