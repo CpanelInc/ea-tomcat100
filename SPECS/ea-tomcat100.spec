@@ -24,7 +24,7 @@ Vendor:  cPanel, Inc.
 Summary: EOL Tomcat
 Version: 10.0.20
 # Doing release_prefix this way for Release allows for OBS-proof versioning, See EA-4572 for more details
-%define release_prefix 4
+%define release_prefix 5
 Release: %{release_prefix}%{?dist}.cpanel
 License: Apache License, 2.0
 Group:   System Environment/Daemons
@@ -112,6 +112,9 @@ EOF
 %attr(0644,root,root) /opt/cpanel/ea-tomcat100/pkg-version
 
 %changelog
+* Mon May 05 2025 Dan Muey <daniel.muey@webpros.com> - 10.0.20-5
+- ZC-12813: Add Almalinux_10 to DISABLE_BUILD in Makefile
+
 * Wed Aug 02 2023 Julian Brown <julian.brown@cpanel.net> - 10.0.20-4
 - ZC-11053: Mark as EOL
 
